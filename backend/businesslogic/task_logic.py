@@ -204,6 +204,7 @@ def list_tasks(
     sort_order: str,
     page: int,
     page_size: int,
+    current_user_id: int | None = None,
 ):
     query = (
         db.query(Task)
@@ -233,9 +234,19 @@ def list_tasks(
             .distinct()
         )
 
-    assigned_ids = [int(item) for item in _parse_csv_values(assigned_to_id) if item.isdigit()]
+    assigned_filters = _parse_csv_values(assigned_to_id)
+    assigned_ids = [int(item) for item in assigned_filters if item.isdigit()]
+    include_me = "__me__" in assigned_filters and current_user_id is not None
+    include_unassigned = "__unassigned__" in assigned_filters
+    assigned_clauses = []
     if assigned_ids:
-        query = query.filter(Task.assigned_to_id.in_(assigned_ids))
+        assigned_clauses.append(Task.assigned_to_id.in_(assigned_ids))
+    if include_me:
+        assigned_clauses.append(Task.assigned_to_id == current_user_id)
+    if include_unassigned:
+        assigned_clauses.append(Task.assigned_to_id.is_(None))
+    if assigned_clauses:
+        query = query.filter(or_(*assigned_clauses))
 
     allowed_sort_fields = {
         "id": Task.id,
@@ -267,6 +278,7 @@ def list_board_tasks(
     assigned_to_id: str | None,
     sort_by: str,
     sort_order: str,
+    current_user_id: int | None = None,
 ):
     result = list_tasks(
         db=db,
@@ -279,6 +291,7 @@ def list_board_tasks(
         sort_order=sort_order,
         page=1,
         page_size=5000,
+        current_user_id=current_user_id,
     )
     return result["items"]
 

@@ -59,6 +59,7 @@ function MultiSelectFilter({
   onClose: () => void;
   onClear: () => void;
 }) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const selectedOptions = values
     .map((value) => options.find((option) => option.value === value))
     .filter((option): option is FilterOption => Boolean(option));
@@ -76,8 +77,23 @@ function MultiSelectFilter({
         ? selectedOptions[0].label
         : `${selectedOptions[0].label} (+${selectedOptions.length - 1})`;
 
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!containerRef.current?.contains(event.target as Node)) {
+        onClose();
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, [onClose, open]);
+
   return (
-    <div className="toolbar-group">
+    <div className="toolbar-group" ref={containerRef}>
       <label>{label}</label>
       <div className="combobox">
         <button
@@ -124,13 +140,11 @@ function MultiSelectFilter({
               ))}
               {!filteredOptions.length ? <div className="combobox-empty">No matching options</div> : null}
             </div>
-            {values.length ? (
-              <div className="filter-dropdown-footer">
-                <button type="button" className="filter-dropdown-clear" onClick={onClear}>
-                  Clear
-                </button>
-              </div>
-            ) : null}
+            <div className="filter-dropdown-footer">
+              <button type="button" className="filter-dropdown-clear" onClick={onClear} disabled={values.length === 0}>
+                Clear
+              </button>
+            </div>
           </div>
         ) : null}
       </div>
@@ -281,7 +295,7 @@ function parseCsvTasks(csvText: string, users: User[]) {
 }
 
 export function TasksPage() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const navigate = useNavigate();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -372,8 +386,18 @@ export function TasksPage() {
   const rangeStart = total === 0 ? 0 : (filters.page - 1) * filters.page_size + 1;
   const rangeEnd = total === 0 ? 0 : Math.min(filters.page * filters.page_size, total);
   const assigneeOptions = useMemo<FilterOption[]>(
-    () => users.map((user) => ({ value: String(user.id), label: user.full_name })),
-    [users],
+    () => {
+      const baseOptions: FilterOption[] = [];
+      if (user) {
+        baseOptions.push({ value: "__me__", label: "@Me" });
+      }
+      baseOptions.push({ value: "__unassigned__", label: "Unassigned" });
+      return [
+        ...baseOptions,
+        ...users.map((optionUser) => ({ value: String(optionUser.id), label: optionUser.full_name })),
+      ];
+    },
+    [user, users],
   );
   const stateFilterOptions = useMemo<FilterOption[]>(
     () => stateOptions.map((option) => ({ value: option.code, label: option.label })),

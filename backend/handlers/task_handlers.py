@@ -89,7 +89,7 @@ def list_tasks_endpoint(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    return list_tasks(db, search, state, priority, tag, assigned_to_id, sort_by, sort_order, page, page_size)
+    return list_tasks(db, search, state, priority, tag, assigned_to_id, sort_by, sort_order, page, page_size, current_user.id)
 
 
 @router.get("/tasks/board", response_model=list[TaskResponse])
@@ -104,7 +104,7 @@ def list_board_tasks_endpoint(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    return list_board_tasks(db, search, state, priority, tag, assigned_to_id, sort_by, sort_order)
+    return list_board_tasks(db, search, state, priority, tag, assigned_to_id, sort_by, sort_order, current_user.id)
 
 
 @router.get("/tasks/{task_id}", response_model=TaskResponse)
@@ -269,6 +269,7 @@ def export_tasks_endpoint(db: Session = Depends(get_db), current_user=Depends(ge
         sort_order="desc",
         page=1,
         page_size=1000,
+        current_user_id=current_user.id,
     )
     buffer = io.StringIO()
     writer = csv.writer(buffer)

@@ -1,21 +1,14 @@
 # Task Management Platform
 
-Task Management Platform built for the Jr SDE assignment using:
-
-- FastAPI microservices
-- PostgreSQL
-- classic SQLAlchemy tables + imperative mappings
-- JWT authentication with backend session tracking
-- React + TypeScript
-- custom CSS without UI frameworks
+Task Management Platform built for the assignment using FastAPI microservices, PostgreSQL, React, TypeScript, and custom CSS.
 
 ## Overview
 
-The project has:
+This project is split into:
 
-- an auth service for registration, login, profile, password change, and logout
-- a task service for task management, comments, attachments, analytics, and dashboard APIs
-- a React frontend with dedicated screens for dashboard, tasks, task editor, analytics, profile, login, and registration
+- an **auth service** for login, profile management, password changes, OTP-based registration, and logout
+- a **task service** for task CRUD, board/list views, comments, attachments, analytics, dashboard data, CSV import, and CSV export
+- a **React frontend** for dashboard, tasks, task detail/edit, analytics, profile, login, and registration
 
 ## Tech Stack
 
@@ -25,28 +18,27 @@ The project has:
 - SQLAlchemy
 - Pydantic
 - PostgreSQL
-- JWT
+- JWT + server-side session validation
 
 ### Frontend
 
-- React
+- React with hooks
 - TypeScript
 - Vite
 - React Router
+- Custom CSS
 
-## Implemented Features
+## Core Features
 
 ### Authentication
 
-- User registration
-- Email OTP verification for first-time registration
-- User login
+- Login
+- OTP-based registration through email
 - Current user profile
 - Edit profile
 - Change password
-- Logout endpoint
-- JWT validation on protected routes
-- Session table for server-side logout/revocation checks
+- Logout with backend session revocation
+- Protected routes with JWT validation on every request
 
 ### Tasks
 
@@ -54,19 +46,17 @@ The project has:
 - Edit task
 - Soft delete task
 - Full-page task editor
-- Board view
 - List view
-- Search, sort, pagination
-- Multi-select filters for:
-  - assigned to
-  - state
-  - priority
-  - tags
-- Bulk task creation from CSV
+- Board view
+- Search
+- Sorting
+- Pagination
+- Multi-select filters
+- Bulk create from CSV
 - CSV template download
 - CSV export
 
-### Task Collaboration
+### Collaboration
 
 - Add comments
 - Edit own comments
@@ -77,38 +67,105 @@ The project has:
 
 ### Dashboard and Analytics
 
-- Workspace dashboard with dedicated backend API
+- Workspace dashboard with dedicated dashboard API
 - Dashboard summary cards
 - Due timeline
-- Due soon view
+- Due soon tasks
 - Team pulse
-- Recently touched tasks
-- Analytics overview statistics
-- Task status donut chart
+- Recently updated tasks
+- Analytics overview
+- Status distribution
 - Priority breakdown
 - User performance metrics
-- Task trends over time
+- Trend charts
 
-### UI/UX
+## Architecture Decisions
 
-- Responsive layout
-- Custom styling
-- Loading states
-- Error states
-- Empty states
-- Confirmation dialogs for destructive actions
-- Drag-and-drop file upload support
+### 1. Split into two backend microservices
 
-## Current Data Model Notes
+The backend is separated into:
 
-- `tasks.state_id` is a foreign key to `task_states_master.id`
-- `tasks.priority_id` is a foreign key to `task_priorities_master.id`
-- tags are stored through a many-to-many join table:
-  - `task_tags(task_id, tag_id)`
-- user auth sessions are stored in:
-  - `user_sessions`
+- **Auth service** on port `3000`
+- **Task service** on port `3001`
 
-The API still returns readable values like `state`, `priority`, and `tags` for frontend use.
+Reason:
+
+- keeps authentication concerns isolated from task management
+- makes API boundaries clearer
+
+### 2. Master tables for state, priority, and tags
+
+Tasks do **not** store raw state/priority strings as the source of truth.
+
+Instead:
+
+- `tasks.state_id -> task_states_master.id`
+- `tasks.priority_id -> task_priorities_master.id`
+- tags use many-to-many through `task_tags(task_id, tag_id)`
+
+Reason:
+
+- normalized schema
+- better referential integrity
+- easier filtering and reporting
+
+### 3. JWT with backend session validation
+
+Authentication uses JWT, but logout is not purely client-side.
+
+The system also stores sessions in `user_sessions`, and protected routes validate:
+
+- token signature
+- token expiry
+- active session row
+
+Reason:
+
+- supports real logout / revocation
+- prevents old logged-out tokens from remaining valid
+
+### 4. Dedicated APIs for dashboard and board view
+
+The frontend does not build everything from the generic task list endpoint.
+
+Examples:
+
+- `/api/dashboard/overview`
+- `/api/tasks/board`
+
+Reason:
+
+- cleaner frontend
+- less overfetching
+- easier to tailor responses to each screen
+
+## Data Model Summary
+
+Key entities:
+
+- `users`
+- `user_sessions`
+- `registration_otps`
+- `tasks`
+- `comments`
+- `attachments`
+- `task_states_master`
+- `task_priorities_master`
+- `tags_master`
+- `task_tags`
+
+Important relationships:
+
+- `tasks.creator_id -> users.id`
+- `tasks.assigned_to_id -> users.id`
+- `tasks.state_id -> task_states_master.id`
+- `tasks.priority_id -> task_priorities_master.id`
+- `comments.task_id -> tasks.id`
+- `comments.author_id -> users.id`
+- `attachments.task_id -> tasks.id`
+- `attachments.uploaded_by_id -> users.id`
+- `task_tags.task_id -> tasks.id`
+- `task_tags.tag_id -> tags_master.id`
 
 ## Project Structure
 
@@ -127,9 +184,24 @@ docker-compose.yml
 README.md
 ```
 
-## Running Locally
+## Setup Instructions
 
-### 1. Backend Setup
+### Prerequisites
+
+Install:
+
+- Python 3.9
+- Node.js v24.14.1
+- PostgreSQL 18
+
+### 1. Clone the repository
+
+```bash
+git clone <your-repo-url>
+cd "Task Management System"
+```
+
+### 2. Backend setup
 
 ```bash
 cd backend
@@ -139,49 +211,73 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-Make sure PostgreSQL is running and update `backend/.env` if needed.
-
-Run the services:
-
-```bash
-uvicorn microservices.auth_server:app --reload --port 3000
-uvicorn microservices.task_server:app --reload --port 3001
-```
-
-### Gmail OTP Setup
-
-To send registration OTPs through Gmail, set these values in `backend/.env`:
-
-```env
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USERNAME=your-gmail-address@gmail.com
-SMTP_PASSWORD=your-gmail-app-password
-SMTP_FROM_EMAIL=your-gmail-address@gmail.com
-SMTP_USE_TLS=true
-REGISTRATION_OTP_EXPIRE_MINUTES=10
-```
-
-Notes:
-
-- use a Gmail App Password, not your normal Gmail password
-- the Google account must have 2-step verification enabled before an App Password can be created
-- if SMTP values are not configured, the app falls back to console/dev OTP delivery in debug mode
-
-### 2. Frontend Setup
+### 3. Frontend setup
 
 ```bash
 cd frontend
 npm install
 cp .env.example .env
+```
+
+### 4. Create the database
+
+Create a PostgreSQL database that matches the values in `backend/.env`.
+
+By default:
+
+- database name: `task_management`
+- user: `postgres`
+- host: `localhost`
+- port: `5432`
+
+The application seeds default state/priority/tag master data automatically on startup.
+
+
+### Frontend (`frontend/.env`)
+
+```env
+VITE_AUTH_API_URL=http://localhost:3000/api
+VITE_TASK_API_URL=http://localhost:3001/api
+```
+
+## How To Run The Application
+
+### Run backend services
+
+Open one terminal:
+
+```bash
+cd backend
+source .venv/bin/activate
+uvicorn microservices.auth_server:app --reload --port 3000
+```
+
+Open a second terminal:
+
+```bash
+cd backend
+source .venv/bin/activate
+uvicorn microservices.task_server:app --reload --port 3001
+```
+
+### Run frontend
+
+Open a third terminal:
+
+```bash
+cd frontend
 npm run dev
 ```
 
-Frontend runs at:
+### Default local URLs
 
-- [http://localhost:4200](http://localhost:4200)
+- Frontend: [http://localhost:4200](http://localhost:4200)
+- Auth API: [http://localhost:3000](http://localhost:3000)
+- Task API: [http://localhost:3001](http://localhost:3001)
 
-## Docker Setup
+## Docker
+
+To run with Docker:
 
 ```bash
 cp backend/.env.example backend/.env
@@ -189,41 +285,50 @@ cp frontend/.env.example frontend/.env
 docker compose up
 ```
 
-Services:
+Docker services:
 
 - Frontend: [http://localhost:4200](http://localhost:4200)
 - Auth API: [http://localhost:3000](http://localhost:3000)
 - Task API: [http://localhost:3001](http://localhost:3001)
+- PostgreSQL: `localhost:5432`
+
+Important:
+
+- `docker-compose.yml` currently uses its own Postgres container defaults:
+  - `POSTGRES_PASSWORD=postgres`
+  - `POSTGRES_DB=task_management`
+- if you run with Docker, make sure `backend/.env` matches the container values, or provide `DATABASE_URL` explicitly
 
 ## API Documentation
 
-Swagger docs:
+Swagger UI:
 
 - Auth service: [http://localhost:3000/docs](http://localhost:3000/docs)
 - Task service: [http://localhost:3001/docs](http://localhost:3001/docs)
 
-OpenAPI exports:
+OpenAPI JSON:
 
-- Auth OpenAPI JSON: [http://localhost:3000/openapi.json](http://localhost:3000/openapi.json)
-- Task OpenAPI JSON: [http://localhost:3001/openapi.json](http://localhost:3001/openapi.json)
+- Auth service: [http://localhost:3000/openapi.json](http://localhost:3000/openapi.json)
+- Task service: [http://localhost:3001/openapi.json](http://localhost:3001/openapi.json)
 
-## Architecture Notes
+## Assumptions Made
 
-- Authentication and task management are split into separate FastAPI services.
-- Backend uses classic SQLAlchemy `Table` definitions with imperative mapping.
-- Task master data is stored in dedicated master tables for states, priorities, and tags.
-- Attachments are stored locally in the `uploads/` directory.
-- Backend includes startup migration logic for moving older task state/priority/tag storage into the current FK-based schema.
-- Dashboard has a dedicated backend overview endpoint instead of building the page from raw task list calls.
+- All authenticated users can view and work with the shared task workspace
+- Ownership-based authorization is enforced where it matters most for this project:
+  - users can only edit/delete their own comments
+- Attachments are stored on the local filesystem instead of cloud object storage
+- The app uses IST (`Asia/Kolkata`) as the backend business timezone
+- Registration requires OTP email delivery and does not allow direct account creation without verification
+- Task tags are reusable master records, not free-form per-task string blobs
 
-## Important Defaults
 
-- Frontend port: `4200`
-- Auth service port: `3000`
-- Task service port: `3001`
+## Reviewer Notes
 
-## Notes for Reviewers
+- Start both backend services and the frontend before using the app.
+- Register a user through the UI to begin testing.
+- Swagger docs are available at the `/docs` endpoints listed above.
 
-- Register a user from the UI or through the auth API before using the app.
-- Swagger documentation is available at the `/docs` endpoints listed above.
-- Logout is backed by a server-side session table, so revoked sessions no longer validate on protected routes.
+
+## Test Credentials
+Username: satwickmanepalli@gmail.com
+Password: Satwick@789

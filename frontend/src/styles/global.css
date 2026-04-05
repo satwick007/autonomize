@@ -896,7 +896,9 @@ a {
   padding: 4px;
   width: 100%;
   min-width: 0;
+  height: 320px;
   min-height: 320px;
+  max-height: 320px;
   border-radius: 6px;
   box-shadow: 0 16px 28px rgba(15, 44, 79, 0.18);
   display: grid;
@@ -914,12 +916,11 @@ a {
   min-height: 30px;
   padding: 0 8px;
   border-radius: 4px;
-  font-size: 0.82rem;
+  font-size: 0.95rem;
 }
 
 .filter-dropdown-options {
-  height: 248px;
-  min-height: 248px;
+  min-height: 0;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -931,8 +932,8 @@ a {
   display: flex;
   align-items: center;
   gap: 6px;
-  min-height: 22px;
-  padding: 1px 6px;
+  min-height: 20px;
+  padding: 2px 6px;
   border-radius: 3px;
   cursor: pointer;
   text-transform: none;
@@ -948,35 +949,45 @@ a {
 }
 
 .filter-checkbox-row input {
-  width: 11px;
-  height: 11px;
+  width: 13px;
+  height: 13px;
   margin: 0;
   flex: 0 0 auto;
 }
 
 .filter-checkbox-row span {
   color: var(--text);
-  font-size: 0.74rem;
+  font-size: 0.98rem;
   font-weight: 600;
-  line-height: 1;
+  line-height: 1.05;
 }
 
 .filter-dropdown-footer {
   display: flex;
   justify-content: flex-end;
-  padding-top: 4px;
+  align-items: center;
+  min-height: 40px;
+  padding: 8px 6px 4px;
   border-top: 1px solid rgba(17, 78, 145, 0.1);
   margin-top: 4px;
+  background: white;
 }
 
 .filter-dropdown-clear {
   border: none;
   background: transparent;
-  color: var(--text-soft);
-  font-size: 0.8rem;
-  font-weight: 700;
+  color: var(--primary-700);
+  font-size: 0.88rem;
+  font-weight: 800;
   cursor: pointer;
-  padding: 4px 2px;
+  padding: 4px 6px;
+  line-height: 1;
+}
+
+.filter-dropdown-clear:disabled {
+  color: #8ea0b5;
+  opacity: 1;
+  cursor: default;
 }
 
 input,
