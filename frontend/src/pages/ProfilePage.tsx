@@ -38,7 +38,6 @@ export function ProfilePage() {
       const updatedUser = await api.updateMe(token, { full_name: fullName.trim() });
       setCurrentUser(updatedUser);
       setProfileSuccess("Profile updated successfully.");
-      setOpenPanel(null);
     } catch (error) {
       setProfileError(error instanceof Error ? error.message : "Unable to update profile");
     } finally {
@@ -68,7 +67,6 @@ export function ProfilePage() {
       });
       setPasswords({ current_password: "", new_password: "", confirm_password: "" });
       setPasswordSuccess("Password changed successfully.");
-      setOpenPanel(null);
     } catch (error) {
       if (error instanceof ApiError && error.status === 400) {
         setPasswordError(error.message);
@@ -134,6 +132,14 @@ export function ProfilePage() {
               <h3>Edit profile</h3>
               <p className="muted-inline">Update the name shown across tasks, comments, and assignments.</p>
             </div>
+            <button
+              type="button"
+              className="panel-close-button"
+              aria-label="Close profile editor"
+              onClick={() => setOpenPanel(null)}
+            >
+              x
+            </button>
           </div>
 
           <form className="profile-form" onSubmit={handleProfileSubmit}>
@@ -170,6 +176,14 @@ export function ProfilePage() {
               <h3>Change password</h3>
               <p className="muted-inline">Choose a new password to keep your account secure.</p>
             </div>
+            <button
+              type="button"
+              className="panel-close-button"
+              aria-label="Close password form"
+              onClick={() => setOpenPanel(null)}
+            >
+              x
+            </button>
           </div>
 
           <form className="profile-form" onSubmit={handlePasswordSubmit}>

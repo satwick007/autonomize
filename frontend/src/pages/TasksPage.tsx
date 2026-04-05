@@ -1,6 +1,6 @@
 import type { ChangeEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
 import { TaskBoard } from "../components/TaskBoard";
 import { TaskTable } from "../components/TaskTable";
@@ -33,6 +33,77 @@ type FilterOption = {
   value: string;
   label: string;
 };
+
+type TasksFilters = {
+  search: string;
+  state: string[];
+  priority: string[];
+  tag: string[];
+  assigned_to_id: string[];
+  sort_by: SortField;
+  sort_order: "asc" | "desc";
+  page: number;
+  page_size: number;
+};
+
+const DEFAULT_FILTERS: TasksFilters = {
+  search: "",
+  state: [],
+  priority: [],
+  tag: [],
+  assigned_to_id: [],
+  sort_by: "id",
+  sort_order: "desc",
+  page: 1,
+  page_size: 8,
+};
+
+function parseListParam(value: string | null) {
+  return value ? value.split(",").map((item) => item.trim()).filter(Boolean) : [];
+}
+
+function parsePositiveNumber(value: string | null, fallback: number) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function parseSortField(value: string | null): SortField {
+  const supported: SortField[] = ["id", "title", "assigned_to_id", "state", "priority", "target_date", "created_at"];
+  return supported.includes(value as SortField) ? (value as SortField) : DEFAULT_FILTERS.sort_by;
+}
+
+function parseSortOrder(value: string | null): "asc" | "desc" {
+  return value === "asc" ? "asc" : "desc";
+}
+
+function filtersFromSearchParams(searchParams: URLSearchParams): TasksFilters {
+  return {
+    search: searchParams.get("search") ?? DEFAULT_FILTERS.search,
+    state: parseListParam(searchParams.get("state")),
+    priority: parseListParam(searchParams.get("priority")),
+    tag: parseListParam(searchParams.get("tag")),
+    assigned_to_id: parseListParam(searchParams.get("assigned_to_id")),
+    sort_by: parseSortField(searchParams.get("sort_by")),
+    sort_order: parseSortOrder(searchParams.get("sort_order")),
+    page: parsePositiveNumber(searchParams.get("page"), DEFAULT_FILTERS.page),
+    page_size: parsePositiveNumber(searchParams.get("page_size"), DEFAULT_FILTERS.page_size),
+  };
+}
+
+function buildSearchParams(filters: TasksFilters, view: ViewMode) {
+  const params = new URLSearchParams();
+  if (filters.search) params.set("search", filters.search);
+  if (filters.state.length) params.set("state", filters.state.join(","));
+  if (filters.priority.length) params.set("priority", filters.priority.join(","));
+  if (filters.tag.length) params.set("tag", filters.tag.join(","));
+  if (filters.assigned_to_id.length) params.set("assigned_to_id", filters.assigned_to_id.join(","));
+  if (filters.sort_by !== DEFAULT_FILTERS.sort_by) params.set("sort_by", filters.sort_by);
+  if (filters.sort_order !== DEFAULT_FILTERS.sort_order) params.set("sort_order", filters.sort_order);
+  if (filters.page !== DEFAULT_FILTERS.page) params.set("page", String(filters.page));
+  if (filters.page_size !== DEFAULT_FILTERS.page_size) params.set("page_size", String(filters.page_size));
+  if (view !== "list") params.set("view", view);
+  return params;
+}
 
 function MultiSelectFilter({
   label,
@@ -297,13 +368,17 @@ function parseCsvTasks(csvText: string, users: User[]) {
 export function TasksPage() {
   const { token, user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialFilters = useMemo(() => filtersFromSearchParams(searchParams), [searchParams]);
+  const initialView = searchParams.get("view") === "board" ? "board" : "list";
   const [tasks, setTasks] = useState<Task[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [stateOptions, setStateOptions] = useState<MasterOption[]>([]);
   const [priorityOptions, setPriorityOptions] = useState<MasterOption[]>([]);
   const [tagOptions, setTagOptions] = useState<TagOption[]>([]);
   const [total, setTotal] = useState(0);
-  const [view, setView] = useState<ViewMode>("list");
+  const [view, setView] = useState<ViewMode>(initialView);
   const [loading, setLoading] = useState(true);
   const [bulkUploading, setBulkUploading] = useState(false);
   const [error, setError] = useState("");
@@ -315,17 +390,7 @@ export function TasksPage() {
     priority: "",
     tag: "",
   });
-  const [filters, setFilters] = useState({
-    search: "",
-    state: [] as string[],
-    priority: [] as string[],
-    tag: [] as string[],
-    assigned_to_id: [] as string[],
-    sort_by: "id",
-    sort_order: "desc",
-    page: 1,
-    page_size: 8
-  });
+  const [filters, setFilters] = useState<TasksFilters>(initialFilters);
 
   const fetchTasks = async () => {
     if (!token) return;
@@ -363,6 +428,18 @@ export function TasksPage() {
   useEffect(() => {
     void fetchTasks();
   }, [token, filters, view]);
+
+  useEffect(() => {
+    setFilters(filtersFromSearchParams(searchParams));
+    setView(searchParams.get("view") === "board" ? "board" : "list");
+  }, [searchParams]);
+
+  useEffect(() => {
+    const nextParams = buildSearchParams(filters, view);
+    if (nextParams.toString() !== searchParams.toString()) {
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [filters, view, searchParams, setSearchParams]);
 
   useEffect(() => {
     if (!token) {
@@ -449,14 +526,9 @@ export function TasksPage() {
     URL.revokeObjectURL(url);
   };
 
-  const downloadBulkTemplate = () => {
-    const template = [
-      "title,description,state,priority,assigned_to_email,start_date,end_date,target_date,tags",
-      'Backend API,Build auth endpoints,todo,high,satwick@example.com,2026-04-05,2026-04-08,2026-04-07,"backend,api"',
-      'UI polish,Improve task page,review,medium,,2026-04-06,2026-04-10,2026-04-09,"frontend,ux"'
-    ].join("\n");
-
-    const blob = new Blob([template], { type: "text/csv;charset=utf-8;" });
+  const downloadBulkTemplate = async () => {
+    if (!token) return;
+    const blob = await api.downloadBulkTemplate(token);
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
@@ -496,6 +568,10 @@ export function TasksPage() {
     }));
   };
 
+  const openTask = (task: Task) => {
+    navigate(`/tasks/${task.id}/edit`, { state: { from: `${location.pathname}${location.search}` } });
+  };
+
   return (
     <section className="page-shell">
       <div className="page-header">
@@ -503,11 +579,11 @@ export function TasksPage() {
           <h1>Task Management</h1>
         </div>
         <div className="header-actions">
-          <button className="secondary-button" onClick={downloadBulkTemplate}>
-            Download Template
-          </button>
           <button className="secondary-button" onClick={downloadExport}>
             Export CSV
+          </button>
+          <button className="secondary-button" onClick={() => void downloadBulkTemplate()}>
+            Download Template
           </button>
           <button
             className="secondary-button"
@@ -606,13 +682,13 @@ export function TasksPage() {
       {!loading && (view === "list" ? (
         <TaskTable
           tasks={tasks}
-          onOpen={(task) => navigate(`/tasks/${task.id}/edit`)}
+          onOpen={openTask}
           sortBy={filters.sort_by}
           sortOrder={filters.sort_order}
           onSort={handleSort}
         />
       ) : (
-        <TaskBoard tasks={tasks} onMove={handleMoveTask} onOpen={(task) => navigate(`/tasks/${task.id}/edit`)} />
+        <TaskBoard tasks={tasks} onMove={handleMoveTask} onOpen={openTask} />
       ))}
 
       <div className="pagination">

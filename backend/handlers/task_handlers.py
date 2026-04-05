@@ -75,6 +75,38 @@ def bulk_create_tasks_endpoint(
     return [serialize_task(task) for task in tasks]
 
 
+@router.get("/tasks/bulk/template")
+def download_bulk_task_template_endpoint(current_user=Depends(get_current_user)):
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["title", "description", "state", "priority", "assigned_to_email", "start_date", "end_date", "target_date", "tags"])
+    writer.writerow([
+        "Backend API",
+        "Build auth endpoints",
+        "todo",
+        "high",
+        "satwick@example.com",
+        "2026-04-05",
+        "2026-04-08",
+        "2026-04-07",
+        "backend,api",
+    ])
+    writer.writerow([
+        "UI polish",
+        "Improve task page",
+        "review",
+        "medium",
+        "",
+        "2026-04-06",
+        "2026-04-10",
+        "2026-04-09",
+        "frontend,ux",
+    ])
+    output.seek(0)
+    headers = {"Content-Disposition": 'attachment; filename="task-bulk-upload-template.csv"'}
+    return StreamingResponse(iter([output.getvalue()]), media_type="text/csv", headers=headers)
+
+
 @router.get("/tasks", response_model=PaginatedTasksResponse)
 def list_tasks_endpoint(
     search: Optional[str] = None,

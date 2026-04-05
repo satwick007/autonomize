@@ -81,7 +81,18 @@ This project is split into:
 
 ## Architecture Decisions
 
-### 1. Split into two backend microservices
+### 1. Why FastAPI
+
+FastAPI was chosen for the backend because it supports rapid API development while still keeping the code structured and production-like.
+
+Reason:
+
+- built-in request and response validation through Pydantic
+- automatic Swagger / OpenAPI documentation
+- clean dependency injection for authentication and protected routes
+- fits well for separating auth and task services without adding a lot of framework complexity
+
+### 2. Split into two backend microservices
 
 The backend is separated into:
 
@@ -93,7 +104,7 @@ Reason:
 - keeps authentication concerns isolated from task management
 - makes API boundaries clearer
 
-### 2. Master tables for state, priority, and tags
+### 3. Master tables for state, priority, and tags
 
 Tasks do **not** store raw state/priority strings as the source of truth.
 
@@ -109,7 +120,7 @@ Reason:
 - better referential integrity
 - easier filtering and reporting
 
-### 3. JWT with backend session validation
+### 4. JWT with backend session validation
 
 Authentication uses JWT, but logout is not purely client-side.
 
@@ -124,7 +135,7 @@ Reason:
 - supports real logout / revocation
 - prevents old logged-out tokens from remaining valid
 
-### 4. Dedicated APIs for dashboard and board view
+### 5. Dedicated APIs for dashboard and board view
 
 The frontend does not build everything from the generic task list endpoint.
 

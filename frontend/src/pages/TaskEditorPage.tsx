@@ -1,6 +1,6 @@
 import type { ChangeEvent, FormEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import { useAuth } from "../hooks/useAuth";
 import type { Comment, TagOption, Task, TaskPriority, TaskState, User } from "../types";
@@ -76,7 +76,9 @@ export function TaskEditorPage() {
   const { token, user } = useAuth();
   const { taskId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const isEdit = Boolean(taskId);
+  const returnTo = typeof location.state?.from === "string" ? location.state.from : "/tasks";
   const [users, setUsers] = useState<User[]>([]);
   const [stateOptions, setStateOptions] = useState<Array<{ code: string; label: string }>>([]);
   const [priorityOptions, setPriorityOptions] = useState<Array<{ code: string; label: string }>>([]);
@@ -409,7 +411,7 @@ export function TaskEditorPage() {
       setError("");
 
       if (!isEdit) {
-        navigate(`/tasks/${task.id}/edit`, { replace: true });
+        navigate(`/tasks/${task.id}/edit`, { replace: true, state: { from: returnTo } });
       }
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Unable to save task");
@@ -431,7 +433,7 @@ export function TaskEditorPage() {
     setError("");
     try {
       await api.deleteTask(token, Number(taskId));
-      navigate("/tasks");
+      navigate(returnTo);
     } catch (deleteError) {
       setError(deleteError instanceof Error ? deleteError.message : "Unable to delete task");
       setDeleting(false);
@@ -443,37 +445,43 @@ export function TaskEditorPage() {
   }
 
   return (
-    <section className="page-shell">
+    <section className="page-shell task-editor-page">
       <div className="editor-hero panel">
         <div className="header-actions">
-          <button type="button" className="secondary-button" onClick={() => navigate("/tasks")}>
+          <button type="button" className="secondary-button" onClick={() => navigate(returnTo)}>
             Back to tasks
           </button>
+          <div className="editor-top-actions">
+            {isEdit ? (
+              <button
+                type="button"
+                className="danger-button editor-top-button"
+                onClick={handleDelete}
+                disabled={deleting || saving}
+              >
+                {deleting ? "Deleting..." : "Delete task"}
+              </button>
+            ) : null}
+            <button
+              type="submit"
+              form="task-editor-form"
+              className="primary-button editor-save editor-top-button"
+              disabled={!canSave || deleting}
+              aria-disabled={!canSave || deleting}
+            >
+              {saving ? "Saving..." : "Save task"}
+            </button>
+          </div>
         </div>
       </div>
 
-      <form className="panel task-editor-form" onSubmit={handleSubmit}>
+      <form id="task-editor-form" className="panel task-editor-form" onSubmit={handleSubmit}>
         {error ? <div className="error-banner">{error}</div> : null}
 
         <div className="work-item-header">
           <div className="work-item-title-block">
             <div className="work-item-id-row">
               <span className="work-item-id-badge">{isEdit ? `TASK ${existingTask?.id ?? ""}` : "NEW TASK"}</span>
-              <div className="editor-header-actions">
-                {isEdit ? (
-                  <button
-                    type="button"
-                    className="danger-button"
-                    onClick={handleDelete}
-                    disabled={deleting || saving}
-                  >
-                    {deleting ? "Deleting..." : "Delete task"}
-                  </button>
-                ) : null}
-                <button type="submit" className="primary-button editor-save editor-save-inline" disabled={!canSave || deleting} aria-disabled={!canSave || deleting}>
-                  {saving ? "Saving..." : "Save task"}
-                </button>
-              </div>
             </div>
             <div className="form-field">
               <label htmlFor="task-title-page">
@@ -690,8 +698,8 @@ export function TaskEditorPage() {
                       {selectedFiles.map((file, index) => (
                         <span key={`${file.name}-${file.size}-${index}`} className="task-chip removable-chip">
                           <span>{file.name}</span>
-                          <button type="button" className="chip-remove" onClick={() => removeSelectedFile(index)}>
-                            Remove
+                          <button type="button" className="chip-remove" onClick={() => removeSelectedFile(index)} aria-label={`Remove ${file.name}`}>
+                            x
                           </button>
                         </span>
                       ))}

@@ -175,5 +175,7 @@ export const api = {
       token
     }),
   exportTasks: (token: string) =>
-    requestBlob(TASK_API_URL, "/analytics/export", token, "Unable to export tasks")
+    requestBlob(TASK_API_URL, "/analytics/export", token, "Unable to export tasks"),
+  downloadBulkTemplate: (token: string) =>
+    requestBlob(TASK_API_URL, "/tasks/bulk/template", token, "Unable to download bulk upload template")
 };
