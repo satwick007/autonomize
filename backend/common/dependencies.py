@@ -1,11 +1,10 @@
-from datetime import datetime, timezone
-
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 import jwt
 
 from common.database import get_db
+from common.datetime_utils import now_ist_naive
 from common.security import decode_access_token
 from datamodels.entities import User, UserSession
 
@@ -34,7 +33,7 @@ def get_current_user(
         .filter(
             UserSession.session_token_id == session_id,
             UserSession.is_active.is_(True),
-            UserSession.expires_at > datetime.now(timezone.utc).replace(tzinfo=None),
+            UserSession.expires_at > now_ist_naive(),
         )
         .first()
     )

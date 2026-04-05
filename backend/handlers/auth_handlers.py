@@ -1,11 +1,10 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from businesslogic.auth_logic import (
     change_password,
     login_user,
-    register_user,
     request_registration_otp,
     revoke_session,
     update_profile,
@@ -34,8 +33,10 @@ bearer_scheme = HTTPBearer(auto_error=True)
 
 @router.post("/register", response_model=TokenResponse, status_code=201)
 def register(payload: UserRegisterRequest, db: Session = Depends(get_db)):
-    result = register_user(payload, db)
-    return {"access_token": result["access_token"], "user": result["user"]}
+    raise HTTPException(
+        status_code=status.HTTP_410_GONE,
+        detail="Direct registration is disabled. Request an OTP first and complete verification to create an account.",
+    )
 
 
 @router.post("/register/request-otp", response_model=RegistrationOtpResponse)

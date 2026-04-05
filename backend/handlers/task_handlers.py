@@ -19,6 +19,7 @@ from businesslogic.task_logic import (
     get_dashboard_overview,
     get_task_metadata,
     get_task_or_404,
+    list_board_tasks,
     list_tasks,
     save_attachment,
     serialize_task,
@@ -89,6 +90,21 @@ def list_tasks_endpoint(
     current_user=Depends(get_current_user),
 ):
     return list_tasks(db, search, state, priority, tag, assigned_to_id, sort_by, sort_order, page, page_size)
+
+
+@router.get("/tasks/board", response_model=list[TaskResponse])
+def list_board_tasks_endpoint(
+    search: Optional[str] = None,
+    state: Optional[str] = None,
+    priority: Optional[str] = None,
+    tag: Optional[str] = None,
+    assigned_to_id: Optional[str] = None,
+    sort_by: str = "created_at",
+    sort_order: str = "desc",
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    return list_board_tasks(db, search, state, priority, tag, assigned_to_id, sort_by, sort_order)
 
 
 @router.get("/tasks/{task_id}", response_model=TaskResponse)

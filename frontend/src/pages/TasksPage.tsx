@@ -72,16 +72,22 @@ function MultiSelectFilter({
   const summary =
     selectedOptions.length === 0
       ? placeholder
-      : selectedOptions.length <= 2
-        ? selectedOptions.map((option) => option.label).join(", ")
-        : `${selectedOptions.length} selected`;
+      : selectedOptions.length === 1
+        ? selectedOptions[0].label
+        : `${selectedOptions[0].label} (+${selectedOptions.length - 1})`;
 
   return (
     <div className="toolbar-group">
       <label>{label}</label>
       <div className="combobox">
-        <button type="button" className="filter-dropdown-trigger" onClick={open ? onClose : onOpen}>
-          <span className={selectedOptions.length ? "filter-dropdown-value" : "filter-dropdown-placeholder"}>{summary}</span>
+        <button
+          type="button"
+          className={`filter-dropdown-trigger${selectedOptions.length ? " has-selection" : ""}${open ? " is-open" : ""}`}
+          onClick={open ? onClose : onOpen}
+        >
+          <span className={selectedOptions.length ? "filter-dropdown-value" : "filter-dropdown-placeholder"} title={selectedOptions.length ? selectedOptions.map((option) => option.label).join(", ") : placeholder}>
+            {summary}
+          </span>
           <span className="filter-dropdown-caret">{open ? "▴" : "▾"}</span>
         </button>
         {open ? (
@@ -94,28 +100,37 @@ function MultiSelectFilter({
                 autoFocus
               />
             </div>
-            <label className="filter-checkbox-row">
-              <input
-                type="checkbox"
-                checked={values.length === 0}
-                onChange={() => onClear()}
-              />
-              <span>All</span>
-            </label>
-            {filteredOptions.map((option) => (
-              <label
-                key={option.value}
-                className="filter-checkbox-row"
-              >
+            <div className="filter-dropdown-options">
+              <label className="filter-checkbox-row">
                 <input
                   type="checkbox"
-                  checked={values.includes(option.value)}
-                  onChange={() => onToggle(option.value)}
+                  checked={values.length === 0}
+                  onChange={() => onClear()}
                 />
-                <span>{option.label}</span>
+                <span>All</span>
               </label>
-            ))}
-            {!filteredOptions.length ? <div className="combobox-empty">No matching options</div> : null}
+              {filteredOptions.map((option) => (
+                <label
+                  key={option.value}
+                  className={`filter-checkbox-row${values.includes(option.value) ? " selected" : ""}`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={values.includes(option.value)}
+                    onChange={() => onToggle(option.value)}
+                  />
+                  <span>{option.label}</span>
+                </label>
+              ))}
+              {!filteredOptions.length ? <div className="combobox-empty">No matching options</div> : null}
+            </div>
+            {values.length ? (
+              <div className="filter-dropdown-footer">
+                <button type="button" className="filter-dropdown-clear" onClick={onClear}>
+                  Clear
+                </button>
+              </div>
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -313,9 +328,17 @@ export function TasksPage() {
         }
         if (value !== "") params.set(key, String(value));
       });
-      const result = await api.tasks(token, params);
-      setTasks(result.items);
-      setTotal(result.total);
+      if (view === "board") {
+        params.delete("page");
+        params.delete("page_size");
+        const result = await api.boardTasks(token, params);
+        setTasks(result);
+        setTotal(result.length);
+      } else {
+        const result = await api.tasks(token, params);
+        setTasks(result.items);
+        setTotal(result.total);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to load tasks");
     } finally {
@@ -325,7 +348,7 @@ export function TasksPage() {
 
   useEffect(() => {
     void fetchTasks();
-  }, [token, filters]);
+  }, [token, filters, view]);
 
   useEffect(() => {
     if (!token) {

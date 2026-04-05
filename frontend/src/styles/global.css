@@ -778,11 +778,11 @@ a {
 .segmented {
   display: inline-flex;
   background: #eef5ff;
-  border-radius: 14px;
+  border-radius: 10px;
   padding: 4px;
-  min-height: 54px;
+  min-height: 52px;
   align-self: end;
-  margin-top: 21px;
+  margin-top: 0;
 }
 
 .segmented .is-active {
@@ -790,15 +790,17 @@ a {
 }
 
 .segmented button {
-  min-height: 46px;
+  min-height: 44px;
+  min-width: 92px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex: 1 1 0;
 }
 
 .toolbar {
   display: grid;
-  grid-template-columns: 2fr repeat(4, minmax(180px, 1fr)) auto;
+  grid-template-columns: minmax(280px, 2fr) repeat(4, minmax(0, 1fr)) auto;
   align-items: end;
   gap: 14px;
 }
@@ -806,9 +808,14 @@ a {
 .toolbar-group {
   display: grid;
   gap: 8px;
+  min-width: 0;
 }
 
-.toolbar-group label {
+.toolbar > .toolbar-group:not(.toolbar-search) {
+  width: 100%;
+}
+
+.toolbar-group > label {
   font-size: 0.78rem;
   font-weight: 700;
   color: var(--muted);
@@ -820,13 +827,17 @@ a {
   min-width: 280px;
 }
 
+.toolbar .combobox {
+  width: 100%;
+}
+
 .filter-dropdown-trigger {
   width: 100%;
   min-height: 52px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
   padding: 0 14px;
   border: 1px solid rgba(17, 78, 145, 0.16);
   border-radius: 10px;
@@ -835,55 +846,137 @@ a {
   font: inherit;
   text-align: left;
   cursor: pointer;
+  min-width: 0;
+  transition: border-color 120ms ease, box-shadow 120ms ease, background 120ms ease, color 120ms ease;
+}
+
+.filter-dropdown-trigger.has-selection {
+  border-color: #6c7787;
+  background: #737d8c;
+  color: #ffffff;
+}
+
+.filter-dropdown-trigger.is-open {
+  border-color: #0f6cbd;
+  box-shadow: 0 0 0 1px #0f6cbd;
 }
 
 .filter-dropdown-placeholder {
   color: #7d8796;
+  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .filter-dropdown-value {
   color: var(--text);
+  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .filter-dropdown-caret {
   color: var(--muted);
-  font-size: 0.8rem;
+  font-size: 0.78rem;
+  flex: 0 0 auto;
+}
+
+.filter-dropdown-trigger.has-selection .filter-dropdown-value,
+.filter-dropdown-trigger.has-selection .filter-dropdown-caret {
+  color: #ffffff;
 }
 
 .filter-dropdown-menu {
-  padding: 8px;
+  padding: 4px;
+  width: 100%;
+  min-width: 0;
+  min-height: 320px;
+  border-radius: 6px;
+  box-shadow: 0 16px 28px rgba(15, 44, 79, 0.18);
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 4px;
+  box-sizing: border-box;
 }
 
 .filter-dropdown-search {
-  padding-bottom: 8px;
+  padding-bottom: 4px;
 }
 
 .filter-dropdown-search input {
   width: 100%;
+  min-height: 30px;
+  padding: 0 8px;
+  border-radius: 4px;
+  font-size: 0.82rem;
+}
+
+.filter-dropdown-options {
+  height: 248px;
+  min-height: 248px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-right: 2px;
 }
 
 .filter-checkbox-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 9px 8px;
-  border-radius: 10px;
+  gap: 6px;
+  min-height: 22px;
+  padding: 1px 6px;
+  border-radius: 3px;
   cursor: pointer;
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 .filter-checkbox-row:hover {
   background: #f3f8ff;
 }
 
+.filter-checkbox-row.selected {
+  background: #dcebfb;
+}
+
 .filter-checkbox-row input {
-  width: 16px;
-  height: 16px;
+  width: 11px;
+  height: 11px;
   margin: 0;
   flex: 0 0 auto;
 }
 
 .filter-checkbox-row span {
   color: var(--text);
+  font-size: 0.74rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.filter-dropdown-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 4px;
+  border-top: 1px solid rgba(17, 78, 145, 0.1);
+  margin-top: 4px;
+}
+
+.filter-dropdown-clear {
+  border: none;
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 4px 2px;
 }
 
 input,
@@ -1389,6 +1482,33 @@ textarea {
 .form-field {
   display: grid;
   gap: 6px;
+}
+
+.password-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-field input {
+  width: 100%;
+  padding-right: 78px;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 10px;
+  border: none;
+  background: transparent;
+  color: var(--primary-700);
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.password-toggle:disabled {
+  cursor: default;
+  opacity: 0.5;
 }
 
 .combobox {

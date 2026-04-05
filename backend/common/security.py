@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from uuid import uuid4
 from passlib.context import CryptContext
 import jwt
 
+from common.datetime_utils import now_ist_naive
 from config.settings import get_settings
 
 
@@ -21,7 +22,7 @@ def verify_password(password: str, hashed_password: str) -> bool:
 
 
 def build_token_expiration(expires_delta: timedelta | None = None) -> datetime:
-    return datetime.now(timezone.utc) + (
+    return now_ist_naive() + (
         expires_delta or timedelta(minutes=settings.access_token_expire_minutes)
     )
 

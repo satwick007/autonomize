@@ -93,6 +93,7 @@ export interface DashboardRecentTask {
 
 export interface DashboardOverview {
   total: number;
+  due_soon_count: number;
   overdue: number;
   unassigned: number;
   my_work: DashboardMiniStat[];

@@ -126,6 +126,8 @@ export const api = {
   users: (token: string) => request<User[]>(AUTH_API_URL, "/auth/users", { token }),
   tasks: (token: string, params: URLSearchParams) =>
     request<PaginatedTasks>(TASK_API_URL, `/tasks?${params.toString()}`, { token }),
+  boardTasks: (token: string, params: URLSearchParams) =>
+    request<Task[]>(TASK_API_URL, `/tasks/board?${params.toString()}`, { token }),
   task: (token: string, id: number) => request<Task>(TASK_API_URL, `/tasks/${id}`, { token }),
   createTask: (token: string, payload: Record<string, unknown>) =>
     request<Task>(TASK_API_URL, "/tasks", { method: "POST", token, body: JSON.stringify(payload) }),

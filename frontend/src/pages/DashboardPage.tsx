@@ -42,9 +42,21 @@ export function DashboardPage() {
               <strong>{dashboard.total}</strong>
               <p>All active work items currently tracked in the workspace.</p>
               <div className="dashboard-primary-metric-foot">
-                <span className="dashboard-pill-neutral">{dashboard.my_work[0]?.value ?? 0} assigned to me</span>
-                <span className="dashboard-pill-warning">{dashboard.due_soon.length} due soon</span>
-                <span className="dashboard-pill-danger">{dashboard.overdue} overdue</span>
+                <span className="dashboard-pill-neutral" title="Open tasks that do not currently have an assignee.">
+                  {dashboard.unassigned} unassigned
+                </span>
+                <span
+                  className="dashboard-pill-warning"
+                  title="Open tasks with a target date from today through the next 7 days."
+                >
+                  {dashboard.due_soon_count} due soon
+                </span>
+                <span
+                  className="dashboard-pill-danger"
+                  title="Open tasks whose target date is earlier than today."
+                >
+                  {dashboard.overdue} overdue
+                </span>
               </div>
             </section>
 

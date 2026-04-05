@@ -192,6 +192,7 @@ class DashboardTimelinePointResponse(BaseModel):
 
 class DashboardOverviewResponse(BaseModel):
     total: int
+    due_soon_count: int
     overdue: int
     unassigned: int
     my_work: List[DashboardMiniStatResponse]

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date
+
+from common.datetime_utils import now_ist_naive
 
 
 class User:
@@ -9,7 +11,7 @@ class User:
         self.email = email
         self.password_hash = password_hash
         self.is_active = True
-        self.created_at = datetime.utcnow()
+        self.created_at = now_ist_naive()
 
 
 class UserSession:
@@ -18,8 +20,8 @@ class UserSession:
         self.session_token_id = session_token_id
         self.expires_at = expires_at
         self.is_active = True
-        self.created_at = datetime.utcnow()
-        self.updated_at = datetime.utcnow()
+        self.created_at = now_ist_naive()
+        self.updated_at = now_ist_naive()
 
 
 class RegistrationOtp:
@@ -30,8 +32,8 @@ class RegistrationOtp:
         self.otp_code = otp_code
         self.expires_at = expires_at
         self.is_used = False
-        self.created_at = datetime.utcnow()
-        self.updated_at = datetime.utcnow()
+        self.created_at = now_ist_naive()
+        self.updated_at = now_ist_naive()
 
 
 class Task:
@@ -57,8 +59,8 @@ class Task:
         self.end_date = end_date
         self.target_date = target_date
         self.is_deleted = False
-        self.created_at = datetime.utcnow()
-        self.updated_at = datetime.utcnow()
+        self.created_at = now_ist_naive()
+        self.updated_at = now_ist_naive()
 
 
 class Comment:
@@ -66,8 +68,8 @@ class Comment:
         self.task_id = task_id
         self.author_id = author_id
         self.content = content
-        self.created_at = datetime.utcnow()
-        self.updated_at = datetime.utcnow()
+        self.created_at = now_ist_naive()
+        self.updated_at = now_ist_naive()
         self.is_deleted = False
 
 
@@ -87,7 +89,7 @@ class Attachment:
         self.file_path = file_path
         self.file_size_bytes = file_size_bytes
         self.content_type = content_type
-        self.uploaded_at = datetime.utcnow()
+        self.uploaded_at = now_ist_naive()
         self.is_deleted = False
 
 

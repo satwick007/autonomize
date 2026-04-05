@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 from pathlib import Path
 from uuid import uuid4
 
@@ -8,6 +8,7 @@ from fastapi import HTTPException, UploadFile, status
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session, selectinload
 
+from common.datetime_utils import now_ist_naive, today_ist
 from common.schemas import BulkTaskCreateRequest, TaskCreateRequest, TaskUpdateRequest
 from config.settings import get_settings
 from datamodels.entities import Attachment, Comment, TagMaster, Task, TaskPriorityMaster, TaskStateMaster, User
@@ -181,14 +182,14 @@ def update_task(task: Task, payload: TaskUpdateRequest, db: Session) -> Task:
 
     for key, value in data.items():
         setattr(task, key, value)
-    task.updated_at = datetime.utcnow()
+    task.updated_at = now_ist_naive()
     db.commit()
     return get_task_or_404(task.id, db)
 
 
 def soft_delete_task(task: Task, db: Session) -> None:
     task.is_deleted = True
-    task.updated_at = datetime.utcnow()
+    task.updated_at = now_ist_naive()
     db.commit()
 
 
@@ -257,6 +258,31 @@ def list_tasks(
     return {"total": total, "page": page, "page_size": page_size, "items": [serialize_task(task) for task in items]}
 
 
+def list_board_tasks(
+    db: Session,
+    search: str | None,
+    state: str | None,
+    priority: str | None,
+    tag: str | None,
+    assigned_to_id: str | None,
+    sort_by: str,
+    sort_order: str,
+):
+    result = list_tasks(
+        db=db,
+        search=search,
+        state=state,
+        priority=priority,
+        tag=tag,
+        assigned_to_id=assigned_to_id,
+        sort_by=sort_by,
+        sort_order=sort_order,
+        page=1,
+        page_size=5000,
+    )
+    return result["items"]
+
+
 def create_comment(task: Task, author_id: int, content: str, db: Session) -> Comment:
     comment = Comment(task_id=task.id, author_id=author_id, content=content.strip())
     db.add(comment)
@@ -291,7 +317,7 @@ def ensure_comment_owner(comment: Comment, user_id: int) -> None:
 
 def update_comment(comment: Comment, content: str, db: Session) -> Comment:
     comment.content = content.strip()
-    comment.updated_at = datetime.utcnow()
+    comment.updated_at = now_ist_naive()
     db.commit()
     db.refresh(comment)
     return comment
@@ -299,7 +325,7 @@ def update_comment(comment: Comment, content: str, db: Session) -> Comment:
 
 def soft_delete_comment(comment: Comment, db: Session) -> None:
     comment.is_deleted = True
-    comment.updated_at = datetime.utcnow()
+    comment.updated_at = now_ist_naive()
     db.commit()
 
 
@@ -398,7 +424,7 @@ def get_dashboard_overview(db: Session, current_user_id: int) -> dict:
         .all()
     )
 
-    today = datetime.utcnow().date()
+    today = today_ist()
     next_week = today + timedelta(days=7)
 
     def task_state(task: Task) -> str:
@@ -465,6 +491,7 @@ def get_dashboard_overview(db: Session, current_user_id: int) -> dict:
 
     return {
         "total": len(tasks),
+        "due_soon_count": len(due_soon_candidates),
         "overdue": overdue,
         "unassigned": len(unassigned_tasks),
         "my_work": my_work,
