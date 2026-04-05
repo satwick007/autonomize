@@ -97,6 +97,16 @@ async function requestBlob(baseUrl: string, path: string, token: string, fallbac
 }
 
 export const api = {
+  requestRegistrationOtp: (payload: { full_name: string; email: string; password: string }) =>
+    request<{ message: string; delivery_method: string }>(AUTH_API_URL, "/auth/register/request-otp", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
+  verifyRegistrationOtp: (payload: { email: string; otp: string }) =>
+    request<{ access_token: string; token_type: string; user: User }>(AUTH_API_URL, "/auth/register/verify-otp", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
   register: (payload: { full_name: string; email: string; password: string }) =>
     request<{ access_token: string; token_type: string; user: User }>(AUTH_API_URL, "/auth/register", {
       method: "POST",

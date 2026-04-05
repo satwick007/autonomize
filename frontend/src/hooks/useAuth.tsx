@@ -9,6 +9,8 @@ type AuthContextType = {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (fullName: string, email: string, password: string) => Promise<void>;
+  requestRegistrationOtp: (fullName: string, email: string, password: string) => Promise<{ message: string; delivery_method: string }>;
+  verifyRegistrationOtp: (email: string, otp: string) => Promise<void>;
   setCurrentUser: (user: User | null) => void;
   logout: () => Promise<void>;
 };
@@ -80,6 +82,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
       register: async (fullName: string, email: string, password: string) => {
         const result = await api.register({ full_name: fullName, email, password });
+        localStorage.setItem(TOKEN_STORAGE_KEY, result.access_token);
+        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(result.user));
+        setToken(result.access_token);
+        setUser(result.user);
+      },
+      requestRegistrationOtp: (fullName: string, email: string, password: string) =>
+        api.requestRegistrationOtp({ full_name: fullName, email, password }),
+      verifyRegistrationOtp: async (email: string, otp: string) => {
+        const result = await api.verifyRegistrationOtp({ email, otp });
         localStorage.setItem(TOKEN_STORAGE_KEY, result.access_token);
         localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(result.user));
         setToken(result.access_token);

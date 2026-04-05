@@ -12,6 +12,22 @@ class UserRegisterRequest(BaseModel):
     password: str = Field(..., min_length=6, max_length=128)
 
 
+class RegistrationOtpRequest(BaseModel):
+    full_name: str = Field(..., min_length=2, max_length=120)
+    email: EmailStr
+    password: str = Field(..., min_length=6, max_length=128)
+
+
+class RegistrationOtpVerifyRequest(BaseModel):
+    email: EmailStr
+    otp: str = Field(..., min_length=6, max_length=6)
+
+
+class RegistrationOtpResponse(BaseModel):
+    message: str
+    delivery_method: str
+
+
 class UserLoginRequest(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=6, max_length=128)

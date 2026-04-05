@@ -22,6 +22,18 @@ class UserSession:
         self.updated_at = datetime.utcnow()
 
 
+class RegistrationOtp:
+    def __init__(self, full_name: str, email: str, password_hash: str, otp_code: str, expires_at: datetime):
+        self.full_name = full_name
+        self.email = email
+        self.password_hash = password_hash
+        self.otp_code = otp_code
+        self.expires_at = expires_at
+        self.is_used = False
+        self.created_at = datetime.utcnow()
+        self.updated_at = datetime.utcnow()
+
+
 class Task:
     def __init__(
         self,

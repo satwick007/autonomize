@@ -39,6 +39,7 @@ The project has:
 ### Authentication
 
 - User registration
+- Email OTP verification for first-time registration
 - User login
 - Current user profile
 - Edit profile
@@ -146,6 +147,26 @@ Run the services:
 uvicorn microservices.auth_server:app --reload --port 3000
 uvicorn microservices.task_server:app --reload --port 3001
 ```
+
+### Gmail OTP Setup
+
+To send registration OTPs through Gmail, set these values in `backend/.env`:
+
+```env
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=your-gmail-address@gmail.com
+SMTP_PASSWORD=your-gmail-app-password
+SMTP_FROM_EMAIL=your-gmail-address@gmail.com
+SMTP_USE_TLS=true
+REGISTRATION_OTP_EXPIRE_MINUTES=10
+```
+
+Notes:
+
+- use a Gmail App Password, not your normal Gmail password
+- the Google account must have 2-step verification enabled before an App Password can be created
+- if SMTP values are not configured, the app falls back to console/dev OTP delivery in debug mode
 
 ### 2. Frontend Setup
 

@@ -39,6 +39,20 @@ user_sessions_table = Table(
     Column("updated_at", DateTime, nullable=False),
 )
 
+registration_otps_table = Table(
+    "registration_otps",
+    metadata,
+    Column("id", Integer, primary_key=True),
+    Column("full_name", String(120), nullable=False),
+    Column("email", String(255), nullable=False, index=True),
+    Column("password_hash", String(255), nullable=False),
+    Column("otp_code", String(6), nullable=False, index=True),
+    Column("expires_at", DateTime, nullable=False, index=True),
+    Column("is_used", Boolean, nullable=False, default=False, index=True),
+    Column("created_at", DateTime, nullable=False),
+    Column("updated_at", DateTime, nullable=False),
+)
+
 task_states_table = Table(
     "task_states_master",
     metadata,

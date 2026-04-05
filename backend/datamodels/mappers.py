@@ -1,9 +1,10 @@
 from sqlalchemy.orm import relationship, registry
 
-from datamodels.entities import Attachment, Comment, TagMaster, Task, TaskPriorityMaster, TaskStateMaster, User, UserSession
+from datamodels.entities import Attachment, Comment, RegistrationOtp, TagMaster, Task, TaskPriorityMaster, TaskStateMaster, User, UserSession
 from datamodels.tables import (
     attachments_table,
     comments_table,
+    registration_otps_table,
     tags_master_table,
     task_tags_table,
     task_priorities_table,
@@ -49,6 +50,8 @@ def map_models() -> None:
             "user": relationship(User, back_populates="sessions"),
         },
     )
+
+    mapper_registry.map_imperatively(RegistrationOtp, registration_otps_table)
 
     mapper_registry.map_imperatively(
         TaskStateMaster,
