@@ -5,6 +5,7 @@ from datamodels.tables import (
     attachments_table,
     comments_table,
     tags_master_table,
+    task_tags_table,
     task_priorities_table,
     task_states_table,
     tasks_table,
@@ -50,6 +51,30 @@ def map_models() -> None:
     )
 
     mapper_registry.map_imperatively(
+        TaskStateMaster,
+        task_states_table,
+        properties={
+            "tasks": relationship(Task, back_populates="state_option"),
+        },
+    )
+
+    mapper_registry.map_imperatively(
+        TaskPriorityMaster,
+        task_priorities_table,
+        properties={
+            "tasks": relationship(Task, back_populates="priority_option"),
+        },
+    )
+
+    mapper_registry.map_imperatively(
+        TagMaster,
+        tags_master_table,
+        properties={
+            "tasks": relationship(Task, secondary=task_tags_table, back_populates="tags"),
+        },
+    )
+
+    mapper_registry.map_imperatively(
         Task,
         tasks_table,
         properties={
@@ -63,6 +88,9 @@ def map_models() -> None:
                 primaryjoin=tasks_table.c.assigned_to_id == users_table.c.id,
                 back_populates="assigned_tasks",
             ),
+            "state_option": relationship(TaskStateMaster, back_populates="tasks"),
+            "priority_option": relationship(TaskPriorityMaster, back_populates="tasks"),
+            "tags": relationship(TagMaster, secondary=task_tags_table, back_populates="tasks"),
             "comments": relationship(Comment, back_populates="task"),
             "attachments": relationship(Attachment, back_populates="task"),
         },
@@ -85,9 +113,5 @@ def map_models() -> None:
             "uploaded_by": relationship(User),
         },
     )
-
-    mapper_registry.map_imperatively(TaskStateMaster, task_states_table)
-    mapper_registry.map_imperatively(TaskPriorityMaster, task_priorities_table)
-    mapper_registry.map_imperatively(TagMaster, tags_master_table)
 
     _is_mapped = True

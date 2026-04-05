@@ -15,7 +15,7 @@ services:
   auth-service:
     image: python:3.11-slim
     working_dir: /app/backend
-    command: sh -c "pip install -r requirements.txt && uvicorn auth_service.auth_server:app --host 0.0.0.0 --port 3000"
+    command: sh -c "pip install -r requirements.txt && uvicorn microservices.auth_server:app --host 0.0.0.0 --port 3000"
     volumes:
       - ./:/app
     env_file:
@@ -28,7 +28,7 @@ services:
   task-service:
     image: python:3.11-slim
     working_dir: /app/backend
-    command: sh -c "pip install -r requirements.txt && uvicorn task_service.task_server:app --host 0.0.0.0 --port 3001"
+    command: sh -c "pip install -r requirements.txt && uvicorn microservices.task_server:app --host 0.0.0.0 --port 3001"
     volumes:
       - ./:/app
     env_file:

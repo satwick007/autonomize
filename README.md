@@ -1,98 +1,164 @@
 # Task Management Platform
 
-Task management platform built from the provided assignment with:
+Task Management Platform built for the Jr SDE assignment using:
 
-- `FastAPI` backend
-- `PostgreSQL` database
-- `Classic SQLAlchemy` datamodels and query style
-- `JWT` authentication
-- `React + TypeScript` frontend
-- Two backend microservices:
-  - `auth_server.py`
-  - `task_server.py`
+- FastAPI microservices
+- PostgreSQL
+- classic SQLAlchemy tables + imperative mappings
+- JWT authentication with backend session tracking
+- React + TypeScript
+- custom CSS without UI frameworks
+
+## Overview
+
+The project has:
+
+- an auth service for registration, login, profile, password change, and logout
+- a task service for task management, comments, attachments, analytics, and dashboard APIs
+- a React frontend with dedicated screens for dashboard, tasks, task editor, analytics, profile, login, and registration
+
+## Tech Stack
+
+### Backend
+
+- FastAPI
+- SQLAlchemy
+- Pydantic
+- PostgreSQL
+- JWT
+
+### Frontend
+
+- React
+- TypeScript
+- Vite
+- React Router
 
 ## Implemented Features
 
-- User registration, login, and current profile
-- Task CRUD with soft delete
-- Bulk task creation
-- Board view with drag-and-drop state changes
-- List view with filtering, searching, sorting, and pagination
-- Task detail drawer with:
-  - ID
-  - Title
-  - Assigned to
-  - State
-  - Start date
-  - End date
-  - Target date
-  - Description
-  - Priority
-  - Created date
-  - File attachments
-  - Estimated effort
-  - Actual effort derived from start/end dates
-- Comments on tasks
-- File uploads with validation
-- Analytics dashboard and export
-- Responsive custom blue UI inspired by Azure Boards
+### Authentication
+
+- User registration
+- User login
+- Current user profile
+- Edit profile
+- Change password
+- Logout endpoint
+- JWT validation on protected routes
+- Session table for server-side logout/revocation checks
+
+### Tasks
+
+- Create task
+- Edit task
+- Soft delete task
+- Full-page task editor
+- Board view
+- List view
+- Search, sort, pagination
+- Multi-select filters for:
+  - assigned to
+  - state
+  - priority
+  - tags
+- Bulk task creation from CSV
+- CSV template download
+- CSV export
+
+### Task Collaboration
+
+- Add comments
+- Edit own comments
+- Delete own comments
+- Upload attachments
+- Download attachments
+- Delete attachments
+
+### Dashboard and Analytics
+
+- Workspace dashboard with dedicated backend API
+- Dashboard summary cards
+- Due timeline
+- Due soon view
+- Team pulse
+- Recently touched tasks
+- Analytics overview statistics
+- Task status donut chart
+- Priority breakdown
+- User performance metrics
+- Task trends over time
+
+### UI/UX
+
+- Responsive layout
+- Custom styling
+- Loading states
+- Error states
+- Empty states
+- Confirmation dialogs for destructive actions
+- Drag-and-drop file upload support
+
+## Current Data Model Notes
+
+- `tasks.state_id` is a foreign key to `task_states_master.id`
+- `tasks.priority_id` is a foreign key to `task_priorities_master.id`
+- tags are stored through a many-to-many join table:
+  - `task_tags(task_id, tag_id)`
+- user auth sessions are stored in:
+  - `user_sessions`
+
+The API still returns readable values like `state`, `priority`, and `tags` for frontend use.
 
 ## Project Structure
 
 ```text
 backend/
-  auth_service/
-    auth_server.py
-  task_service/
-    task_server.py
   businesslogic/
   common/
   config/
   datamodels/
   handlers/
+  microservices/
 frontend/
   src/
-docs/
 uploads/
+docker-compose.yml
+README.md
 ```
 
-## Backend Setup
+## Running Locally
 
-1. Create a Python virtual environment.
-2. Install dependencies:
+### 1. Backend Setup
 
 ```bash
 cd backend
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-```
-
-3. Copy the environment file:
-
-```bash
 cp .env.example .env
 ```
 
-4. Make sure PostgreSQL is running and update `.env` if needed.
+Make sure PostgreSQL is running and update `backend/.env` if needed.
 
-5. Run the microservices:
+Run the services:
 
 ```bash
-uvicorn auth_service.auth_server:app --reload --port 3000
-uvicorn task_service.task_server:app --reload --port 3001
+uvicorn microservices.auth_server:app --reload --port 3000
+uvicorn microservices.task_server:app --reload --port 3001
 ```
 
-## Frontend Setup
+### 2. Frontend Setup
 
 ```bash
 cd frontend
-cp .env.example .env
 npm install
+cp .env.example .env
 npm run dev
 ```
 
-Frontend default URL: `http://localhost:4200`
+Frontend runs at:
+
+- [http://localhost:4200](http://localhost:4200)
 
 ## Docker Setup
 
@@ -102,30 +168,41 @@ cp frontend/.env.example frontend/.env
 docker compose up
 ```
 
+Services:
+
+- Frontend: [http://localhost:4200](http://localhost:4200)
+- Auth API: [http://localhost:3000](http://localhost:3000)
+- Task API: [http://localhost:3001](http://localhost:3001)
+
 ## API Documentation
 
-FastAPI Swagger docs:
+Swagger docs:
 
-- Auth service: `http://localhost:3000/docs`
-- Task service: `http://localhost:3001/docs`
+- Auth service: [http://localhost:3000/docs](http://localhost:3000/docs)
+- Task service: [http://localhost:3001/docs](http://localhost:3001/docs)
 
-## Architecture Decisions
+OpenAPI exports:
 
-- Split authentication and task management into separate FastAPI apps to match the microservice requirement.
-- Shared database configuration and classic SQLAlchemy mappings live in a common backend layer.
-- Classic SQLAlchemy `Table` definitions plus imperative mapping are used instead of declarative models.
-- File uploads are stored locally in the `uploads/` directory for simplicity.
-- Actual effort is calculated from `start_date` and `end_date`.
-- The frontend uses a board/list dual-mode task experience instead of separate disconnected screens.
+- Auth OpenAPI JSON: [http://localhost:3000/openapi.json](http://localhost:3000/openapi.json)
+- Task OpenAPI JSON: [http://localhost:3001/openapi.json](http://localhost:3001/openapi.json)
 
-## Assumptions
+## Architecture Notes
 
-- `assigned_to` is stored as a user reference when available.
-- File storage is local for the assignment implementation.
-- Actual effort is expressed in hours using calendar-day difference between start and end dates.
-- Rate limiting is implemented in-memory for the task service.
-- Comments support plain text only.
+- Authentication and task management are split into separate FastAPI services.
+- Backend uses classic SQLAlchemy `Table` definitions with imperative mapping.
+- Task master data is stored in dedicated master tables for states, priorities, and tags.
+- Attachments are stored locally in the `uploads/` directory.
+- Backend includes startup migration logic for moving older task state/priority/tag storage into the current FK-based schema.
+- Dashboard has a dedicated backend overview endpoint instead of building the page from raw task list calls.
 
-## Suggested Demo Credentials
+## Important Defaults
 
-Register a user from the UI, or create one through `/api/auth/register`, then use the same account across the app.
+- Frontend port: `4200`
+- Auth service port: `3000`
+- Task service port: `3001`
+
+## Notes for Reviewers
+
+- Register a user from the UI or through the auth API before using the app.
+- Swagger documentation is available at the `/docs` endpoints listed above.
+- Logout is backed by a server-side session table, so revoked sessions no longer validate on protected routes.

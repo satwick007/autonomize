@@ -73,17 +73,23 @@ tasks_table = Table(
     Column("id", Integer, primary_key=True),
     Column("title", String(160), nullable=False, index=True),
     Column("description", Text, nullable=False, default=""),
-    Column("state", String(32), nullable=False, index=True),
-    Column("priority", String(32), nullable=False, index=True),
+    Column("state_id", Integer, ForeignKey("task_states_master.id"), nullable=False, index=True),
+    Column("priority_id", Integer, ForeignKey("task_priorities_master.id"), nullable=False, index=True),
     Column("creator_id", Integer, ForeignKey("users.id"), nullable=False, index=True),
     Column("assigned_to_id", Integer, ForeignKey("users.id"), nullable=True, index=True),
     Column("start_date", Date, nullable=True),
     Column("end_date", Date, nullable=True),
     Column("target_date", Date, nullable=True, index=True),
-    Column("tags", Text, nullable=False, default=""),
     Column("is_deleted", Boolean, nullable=False, default=False, index=True),
     Column("created_at", DateTime, nullable=False, index=True),
     Column("updated_at", DateTime, nullable=False),
+)
+
+task_tags_table = Table(
+    "task_tags",
+    metadata,
+    Column("task_id", Integer, ForeignKey("tasks.id"), primary_key=True),
+    Column("tag_id", Integer, ForeignKey("tags_master.id"), primary_key=True),
 )
 
 comments_table = Table(
@@ -112,6 +118,7 @@ attachments_table = Table(
     Column("is_deleted", Boolean, nullable=False, default=False, index=True),
 )
 
-Index("ix_tasks_state_priority", tasks_table.c.state, tasks_table.c.priority)
+Index("ix_tasks_state_priority", tasks_table.c.state_id, tasks_table.c.priority_id)
+Index("ix_task_tags_tag_id", task_tags_table.c.tag_id)
 Index("ix_comments_task_active", comments_table.c.task_id, comments_table.c.is_deleted)
 Index("ix_attachments_task_active", attachments_table.c.task_id, attachments_table.c.is_deleted)

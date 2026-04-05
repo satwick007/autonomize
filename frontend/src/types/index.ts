@@ -23,13 +23,16 @@ export interface Task {
   id: number;
   title: string;
   description: string;
+  state_id?: number;
   state: TaskState;
+  priority_id?: number;
   priority: TaskPriority;
   assigned_to_id?: number | null;
   assigned_to_name?: string | null;
   start_date?: string | null;
   end_date?: string | null;
   target_date?: string | null;
+  tag_ids?: number[];
   tags: string[];
   created_at: string;
   updated_at: string;

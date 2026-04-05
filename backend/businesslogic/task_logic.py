@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session, selectinload
 from common.schemas import BulkTaskCreateRequest, TaskCreateRequest, TaskUpdateRequest
 from config.settings import get_settings
 from datamodels.entities import Attachment, Comment, TagMaster, Task, TaskPriorityMaster, TaskStateMaster, User
+from datamodels.tables import task_tags_table
 
 
 settings = get_settings()
@@ -22,21 +23,39 @@ def _parse_csv_values(value: str | None) -> list[str]:
     return [item.strip() for item in value.split(",") if item.strip()]
 
 
+def _task_load_options():
+    return (
+        selectinload(Task.assignee),
+        selectinload(Task.attachments),
+        selectinload(Task.comments),
+        selectinload(Task.tags),
+        selectinload(Task.state_option),
+        selectinload(Task.priority_option),
+    )
+
+
 def serialize_task(task: Task) -> dict:
     active_attachments = [attachment for attachment in task.attachments if not attachment.is_deleted]
     active_comments = [comment for comment in task.comments if not comment.is_deleted]
+    state_code = task.state_option.code if task.state_option else ""
+    priority_code = task.priority_option.code if task.priority_option else ""
+    task_tags = sorted(task.tags, key=lambda item: item.name.lower())
+
     return {
         "id": task.id,
         "title": task.title,
         "description": task.description,
-        "state": task.state,
-        "priority": task.priority,
+        "state_id": task.state_id,
+        "state": state_code,
+        "priority_id": task.priority_id,
+        "priority": priority_code,
         "assigned_to_id": task.assigned_to_id,
         "assigned_to_name": task.assignee.full_name if task.assignee else None,
         "start_date": task.start_date,
         "end_date": task.end_date,
         "target_date": task.target_date,
-        "tags": [item for item in (task.tags or "").split(",") if item],
+        "tag_ids": [tag.id for tag in task_tags],
+        "tags": [tag.name for tag in task_tags],
         "created_at": task.created_at,
         "updated_at": task.updated_at,
         "attachments": [
@@ -64,72 +83,80 @@ def _validate_assignee(assigned_to_id: int | None, db: Session) -> None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Assigned user not found")
 
 
-def _validate_state(state: str, db: Session) -> str:
+def _get_state_option(state: str, db: Session) -> TaskStateMaster:
     normalized = state.strip().lower()
-    option = db.query(TaskStateMaster).filter(TaskStateMaster.code == normalized, TaskStateMaster.is_active.is_(True)).first()
+    option = (
+        db.query(TaskStateMaster)
+        .filter(TaskStateMaster.code == normalized, TaskStateMaster.is_active.is_(True))
+        .first()
+    )
     if not option:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unsupported task state: {state}")
-    return option.code
+    return option
 
 
-def _validate_priority(priority: str, db: Session) -> str:
+def _get_priority_option(priority: str, db: Session) -> TaskPriorityMaster:
     normalized = priority.strip().lower()
-    option = db.query(TaskPriorityMaster).filter(TaskPriorityMaster.code == normalized, TaskPriorityMaster.is_active.is_(True)).first()
+    option = (
+        db.query(TaskPriorityMaster)
+        .filter(TaskPriorityMaster.code == normalized, TaskPriorityMaster.is_active.is_(True))
+        .first()
+    )
     if not option:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unsupported task priority: {priority}")
-    return option.code
+    return option
 
 
-def _normalize_tags(tags: list[str], db: Session) -> list[str]:
-    normalized_tags: list[str] = []
+def _normalize_tags(tags: list[str], db: Session) -> list[TagMaster]:
+    normalized_names: list[str] = []
     for raw_tag in tags:
         tag = raw_tag.strip().lower()
-        if not tag:
-            continue
-        existing = db.query(TagMaster).filter(TagMaster.name == tag).first()
+        if tag and tag not in normalized_names:
+            normalized_names.append(tag)
+
+    normalized_tags: list[TagMaster] = []
+    for tag_name in normalized_names:
+        existing = db.query(TagMaster).filter(TagMaster.name == tag_name, TagMaster.is_active.is_(True)).first()
         if not existing:
-            db.add(TagMaster(name=tag))
+            existing = TagMaster(name=tag_name)
+            db.add(existing)
             db.flush()
-        normalized_tags.append(tag)
+        normalized_tags.append(existing)
     return normalized_tags
 
 
 def create_task(payload: TaskCreateRequest, creator_id: int, db: Session) -> Task:
     _validate_assignee(payload.assigned_to_id, db)
-    state = _validate_state(payload.state, db)
-    priority = _validate_priority(payload.priority, db)
+    state_option = _get_state_option(payload.state, db)
+    priority_option = _get_priority_option(payload.priority, db)
     tags = _normalize_tags(payload.tags, db)
+
     task = Task(
         title=payload.title.strip(),
         description=payload.description.strip(),
-        state=state,
-        priority=priority,
+        state_id=state_option.id,
+        priority_id=priority_option.id,
         creator_id=creator_id,
         assigned_to_id=payload.assigned_to_id,
         start_date=payload.start_date,
         end_date=payload.end_date,
         target_date=payload.target_date,
-        tags=",".join(tags),
     )
     db.add(task)
+    db.flush()
+    task.tags = tags
     db.commit()
-    db.refresh(task)
-    return task
+    return get_task_or_404(task.id, db)
 
 
 def bulk_create_tasks(payload: BulkTaskCreateRequest, creator_id: int, db: Session) -> list[Task]:
-    tasks = [create_task(task_payload, creator_id, db) for task_payload in payload.tasks]
-    return tasks
+    return [create_task(task_payload, creator_id, db) for task_payload in payload.tasks]
 
 
 def get_task_or_404(task_id: int, db: Session) -> Task:
     task = (
         db.query(Task)
-        .options(
-            selectinload(Task.assignee),
-            selectinload(Task.attachments),
-            selectinload(Task.comments),
-        )
+        .options(*_task_load_options())
         .filter(Task.id == task_id, Task.is_deleted.is_(False))
         .first()
     )
@@ -143,17 +170,20 @@ def update_task(task: Task, payload: TaskUpdateRequest, db: Session) -> Task:
     if "assigned_to_id" in data:
         _validate_assignee(data["assigned_to_id"], db)
     if "state" in data and data["state"] is not None:
-        data["state"] = _validate_state(data["state"], db)
+        task.state_id = _get_state_option(data["state"], db).id
+        data.pop("state")
     if "priority" in data and data["priority"] is not None:
-        data["priority"] = _validate_priority(data["priority"], db)
+        task.priority_id = _get_priority_option(data["priority"], db).id
+        data.pop("priority")
     if "tags" in data and data["tags"] is not None:
-        data["tags"] = ",".join(_normalize_tags(data["tags"], db))
+        task.tags = _normalize_tags(data["tags"], db)
+        data.pop("tags")
+
     for key, value in data.items():
         setattr(task, key, value)
     task.updated_at = datetime.utcnow()
     db.commit()
-    db.refresh(task)
-    return task
+    return get_task_or_404(task.id, db)
 
 
 def soft_delete_task(task: Task, db: Session) -> None:
@@ -168,27 +198,41 @@ def list_tasks(
     state: str | None,
     priority: str | None,
     tag: str | None,
-    assigned_to_id: int | None,
+    assigned_to_id: str | None,
     sort_by: str,
     sort_order: str,
     page: int,
     page_size: int,
 ):
-    query = db.query(Task).filter(Task.is_deleted.is_(False))
+    query = (
+        db.query(Task)
+        .join(TaskStateMaster, Task.state_id == TaskStateMaster.id)
+        .join(TaskPriorityMaster, Task.priority_id == TaskPriorityMaster.id)
+        .filter(Task.is_deleted.is_(False))
+    )
 
     if search:
         pattern = f"%{search.strip()}%"
         query = query.filter(or_(Task.title.ilike(pattern), Task.description.ilike(pattern)))
-    states = _parse_csv_values(state)
+
+    states = [item.lower() for item in _parse_csv_values(state)]
     if states:
-        query = query.filter(Task.state.in_(states))
-    priorities = _parse_csv_values(priority)
+        query = query.filter(TaskStateMaster.code.in_(states))
+
+    priorities = [item.lower() for item in _parse_csv_values(priority)]
     if priorities:
-        query = query.filter(Task.priority.in_(priorities))
+        query = query.filter(TaskPriorityMaster.code.in_(priorities))
+
     tags = [item.lower() for item in _parse_csv_values(tag)]
     if tags:
-        query = query.filter(or_(*[Task.tags.ilike(f"%{item}%") for item in tags]))
-    assigned_ids = [int(item) for item in _parse_csv_values(str(assigned_to_id) if assigned_to_id is not None else None) if item.isdigit()]
+        query = (
+            query.join(task_tags_table, Task.id == task_tags_table.c.task_id)
+            .join(TagMaster, task_tags_table.c.tag_id == TagMaster.id)
+            .filter(TagMaster.name.in_(tags))
+            .distinct()
+        )
+
+    assigned_ids = [int(item) for item in _parse_csv_values(assigned_to_id) if item.isdigit()]
     if assigned_ids:
         query = query.filter(Task.assigned_to_id.in_(assigned_ids))
 
@@ -197,22 +241,18 @@ def list_tasks(
         "created_at": Task.created_at,
         "updated_at": Task.updated_at,
         "assigned_to_id": Task.assigned_to_id,
-        "priority": Task.priority,
+        "priority": TaskPriorityMaster.sort_order,
         "start_date": Task.start_date,
         "end_date": Task.end_date,
         "target_date": Task.target_date,
         "title": Task.title,
-        "state": Task.state,
+        "state": TaskStateMaster.sort_order,
     }
-    sort_column = allowed_sort_fields.get(sort_by, Task.created_at)
+    sort_column = allowed_sort_fields.get(sort_by, Task.id)
     ordered_query = query.order_by(sort_column.desc() if sort_order == "desc" else sort_column.asc())
-    loaded_query = ordered_query.options(
-        selectinload(Task.assignee),
-        selectinload(Task.attachments),
-        selectinload(Task.comments),
-    )
+    loaded_query = ordered_query.options(*_task_load_options())
 
-    total = query.count()
+    total = query.order_by(None).count()
     items = loaded_query.offset((page - 1) * page_size).limit(page_size).all()
     return {"total": total, "page": page, "page_size": page_size, "items": [serialize_task(task) for task in items]}
 
@@ -307,20 +347,23 @@ def soft_delete_attachment(attachment: Attachment, db: Session) -> None:
 
 def get_analytics(db: Session) -> dict:
     by_state_rows = (
-        db.query(Task.state, func.count(Task.id))
+        db.query(TaskStateMaster.code, func.count(Task.id))
+        .join(Task, Task.state_id == TaskStateMaster.id)
         .filter(Task.is_deleted.is_(False))
-        .group_by(Task.state)
+        .group_by(TaskStateMaster.code)
         .all()
     )
     by_priority_rows = (
-        db.query(Task.priority, func.count(Task.id))
+        db.query(TaskPriorityMaster.code, func.count(Task.id))
+        .join(Task, Task.priority_id == TaskPriorityMaster.id)
         .filter(Task.is_deleted.is_(False))
-        .group_by(Task.priority)
+        .group_by(TaskPriorityMaster.code)
         .all()
     )
     completed_rows = (
         db.query(Task.end_date, func.count(Task.id))
-        .filter(Task.is_deleted.is_(False), Task.state == "done", Task.end_date.isnot(None))
+        .join(TaskStateMaster, Task.state_id == TaskStateMaster.id)
+        .filter(Task.is_deleted.is_(False), TaskStateMaster.code == "done", Task.end_date.isnot(None))
         .group_by(Task.end_date)
         .order_by(Task.end_date.asc())
         .all()
@@ -328,15 +371,16 @@ def get_analytics(db: Session) -> dict:
     performance_rows = (
         db.query(User.full_name, func.count(Task.id))
         .join(Task, Task.assigned_to_id == User.id)
-        .filter(Task.is_deleted.is_(False), Task.state == "done")
+        .join(TaskStateMaster, Task.state_id == TaskStateMaster.id)
+        .filter(Task.is_deleted.is_(False), TaskStateMaster.code == "done")
         .group_by(User.full_name)
         .order_by(func.count(Task.id).desc())
         .all()
     )
 
     return {
-        "by_state": {state: count for state, count in by_state_rows},
-        "by_priority": {priority: count for priority, count in by_priority_rows},
+        "by_state": {state_code: count for state_code, count in by_state_rows},
+        "by_priority": {priority_code: count for priority_code, count in by_priority_rows},
         "completed_over_time": [{"date": completed_date.isoformat(), "count": count} for completed_date, count in completed_rows],
         "user_performance": [{"user": full_name, "completed_tasks": count} for full_name, count in performance_rows],
     }
@@ -345,7 +389,11 @@ def get_analytics(db: Session) -> dict:
 def get_dashboard_overview(db: Session, current_user_id: int) -> dict:
     tasks = (
         db.query(Task)
-        .options(selectinload(Task.assignee))
+        .options(
+            selectinload(Task.assignee),
+            selectinload(Task.state_option),
+            selectinload(Task.priority_option),
+        )
         .filter(Task.is_deleted.is_(False))
         .all()
     )
@@ -353,10 +401,16 @@ def get_dashboard_overview(db: Session, current_user_id: int) -> dict:
     today = datetime.utcnow().date()
     next_week = today + timedelta(days=7)
 
+    def task_state(task: Task) -> str:
+        return task.state_option.code if task.state_option else ""
+
+    def task_priority(task: Task) -> str:
+        return task.priority_option.code if task.priority_option else ""
+
     my_tasks = [task for task in tasks if task.assigned_to_id == current_user_id]
-    open_tasks = [task for task in tasks if task.state != "done"]
+    open_tasks = [task for task in tasks if task_state(task) != "done"]
     unassigned_tasks = [task for task in open_tasks if not task.assigned_to_id]
-    review_tasks = [task for task in tasks if task.state == "review"]
+    review_tasks = [task for task in tasks if task_state(task) == "review"]
 
     due_soon_candidates = [
         task for task in open_tasks
@@ -367,23 +421,23 @@ def get_dashboard_overview(db: Session, current_user_id: int) -> dict:
 
     my_work = [
         {"label": "Assigned to me", "value": len(my_tasks)},
-        {"label": "In progress", "value": len([task for task in my_tasks if task.state == "in_progress"])},
-        {"label": "Needs review", "value": len([task for task in my_tasks if task.state == "review"])},
+        {"label": "In progress", "value": len([task for task in my_tasks if task_state(task) == "in_progress"])},
+        {"label": "Needs review", "value": len([task for task in my_tasks if task_state(task) == "review"])},
         {"label": "Due this week", "value": len([task for task in due_soon_candidates if task.assigned_to_id == current_user_id])},
     ]
 
     state_cards = [
-        {"label": "To Do", "value": len([task for task in tasks if task.state == "todo"])},
-        {"label": "In Progress", "value": len([task for task in tasks if task.state == "in_progress"])},
+        {"label": "To Do", "value": len([task for task in tasks if task_state(task) == "todo"])},
+        {"label": "In Progress", "value": len([task for task in tasks if task_state(task) == "in_progress"])},
         {"label": "Review", "value": len(review_tasks)},
-        {"label": "Done", "value": len([task for task in tasks if task.state == "done"])},
+        {"label": "Done", "value": len([task for task in tasks if task_state(task) == "done"])},
     ]
 
     priority_cards = [
-        {"label": "Critical", "value": len([task for task in tasks if task.priority == "critical"])},
-        {"label": "High", "value": len([task for task in tasks if task.priority == "high"])},
-        {"label": "Medium", "value": len([task for task in tasks if task.priority == "medium"])},
-        {"label": "Low", "value": len([task for task in tasks if task.priority == "low"])},
+        {"label": "Critical", "value": len([task for task in tasks if task_priority(task) == "critical"])},
+        {"label": "High", "value": len([task for task in tasks if task_priority(task) == "high"])},
+        {"label": "Medium", "value": len([task for task in tasks if task_priority(task) == "medium"])},
+        {"label": "Low", "value": len([task for task in tasks if task_priority(task) == "low"])},
     ]
 
     due_timeline = []
@@ -403,7 +457,7 @@ def get_dashboard_overview(db: Session, current_user_id: int) -> dict:
         if name not in team_pulse_map:
             team_pulse_map[name] = {"name": name, "count": 0, "review": 0}
         team_pulse_map[name]["count"] += 1
-        if task.state == "review":
+        if task_state(task) == "review":
             team_pulse_map[name]["review"] += 1
     team_pulse = sorted(team_pulse_map.values(), key=lambda item: int(item["count"]), reverse=True)[:5]
 
@@ -422,7 +476,7 @@ def get_dashboard_overview(db: Session, current_user_id: int) -> dict:
                 "id": task.id,
                 "title": task.title,
                 "assigned_to_name": task.assignee.full_name if task.assignee else None,
-                "state": task.state,
+                "state": task_state(task),
                 "target_date": task.target_date,
             }
             for task in due_soon
@@ -433,8 +487,8 @@ def get_dashboard_overview(db: Session, current_user_id: int) -> dict:
                 "id": task.id,
                 "title": task.title,
                 "assigned_to_name": task.assignee.full_name if task.assignee else None,
-                "priority": task.priority,
-                "state": task.state,
+                "priority": task_priority(task),
+                "state": task_state(task),
                 "updated_at": task.updated_at,
             }
             for task in recently_touched

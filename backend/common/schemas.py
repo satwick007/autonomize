@@ -109,13 +109,16 @@ class TaskResponse(BaseModel):
     id: int
     title: str
     description: str
+    state_id: int
     state: str
+    priority_id: int
     priority: str
     assigned_to_id: Optional[int]
     assigned_to_name: Optional[str]
     start_date: Optional[date]
     end_date: Optional[date]
     target_date: Optional[date]
+    tag_ids: List[int]
     tags: List[str]
     created_at: datetime
     updated_at: datetime

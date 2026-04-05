@@ -27,25 +27,23 @@ class Task:
         self,
         title: str,
         description: str,
-        state: str,
-        priority: str,
+        state_id: int,
+        priority_id: int,
         creator_id: int,
         assigned_to_id: int | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
         target_date: date | None = None,
-        tags: str = "",
     ):
         self.title = title
         self.description = description
-        self.state = state
-        self.priority = priority
+        self.state_id = state_id
+        self.priority_id = priority_id
         self.creator_id = creator_id
         self.assigned_to_id = assigned_to_id
         self.start_date = start_date
         self.end_date = end_date
         self.target_date = target_date
-        self.tags = tags
         self.is_deleted = False
         self.created_at = datetime.utcnow()
         self.updated_at = datetime.utcnow()
