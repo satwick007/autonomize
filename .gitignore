@@ -1,0 +1,12 @@
+.DS_Store
+.env
+.venv/
+venv/
+backend/venv/
+__pycache__/
+*.pyc
+node_modules/
+dist/
+coverage/
+uploads/*
+!.gitkeep
