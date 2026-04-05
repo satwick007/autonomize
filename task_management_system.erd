@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<diagram version="1" name="task_management_system">
+	<entities>
+		<data-source id="postgres-jdbc-19d54409ed6-3d33efe7763ff020">
+			<entity id="1" name="attachments" fq-name="public.attachments">
+				<path name="public"/>
+				<path name="task_management_satwick"/>
+			</entity>
+			<entity id="2" name="comments" fq-name="public.&quot;comments&quot;">
+				<path name="public"/>
+				<path name="task_management_satwick"/>
+			</entity>
+			<entity id="3" name="tags_master" fq-name="public.tags_master">
+				<path name="public"/>
+				<path name="task_management_satwick"/>
+			</entity>
+			<entity id="4" name="task_priorities_master" fq-name="public.task_priorities_master">
+				<path name="public"/>
+				<path name="task_management_satwick"/>
+			</entity>
+			<entity id="5" name="task_states_master" fq-name="public.task_states_master">
+				<path name="public"/>
+				<path name="task_management_satwick"/>
+			</entity>
+			<entity id="6" name="task_tags" fq-name="public.task_tags">
+				<path name="public"/>
+				<path name="task_management_satwick"/>
+			</entity>
+			<entity id="7" name="tasks" fq-name="public.tasks">
+				<path name="public"/>
+				<path name="task_management_satwick"/>
+			</entity>
+			<entity id="8" name="user_sessions" fq-name="public.user_sessions">
+				<path name="public"/>
+				<path name="task_management_satwick"/>
+			</entity>
+			<entity id="9" name="users" fq-name="public.users">
+				<path name="public"/>
+				<path name="task_management_satwick"/>
+			</entity>
+		</data-source>
+	</entities>
+	<relations>
+		<relation name="task_tags_tag_id_fkey" fq-name="public.task_tags.task_tags_tag_id_fkey" type="fk" pk-ref="3" fk-ref="6"/>
+		<relation name="tasks_priority_id_fkey" fq-name="public.tasks.tasks_priority_id_fkey" type="fk" pk-ref="4" fk-ref="7"/>
+		<relation name="tasks_state_id_fkey" fq-name="public.tasks.tasks_state_id_fkey" type="fk" pk-ref="5" fk-ref="7"/>
+		<relation name="attachments_task_id_fkey" fq-name="public.attachments.attachments_task_id_fkey" type="fk" pk-ref="7" fk-ref="1"/>
+		<relation name="comments_task_id_fkey" fq-name="public.&quot;comments&quot;.comments_task_id_fkey" type="fk" pk-ref="7" fk-ref="2"/>
+		<relation name="task_tags_task_id_fkey" fq-name="public.task_tags.task_tags_task_id_fkey" type="fk" pk-ref="7" fk-ref="6"/>
+		<relation name="attachments_uploaded_by_id_fkey" fq-name="public.attachments.attachments_uploaded_by_id_fkey" type="fk" pk-ref="9" fk-ref="1"/>
+		<relation name="comments_author_id_fkey" fq-name="public.&quot;comments&quot;.comments_author_id_fkey" type="fk" pk-ref="9" fk-ref="2"/>
+		<relation name="tasks_assigned_to_id_fkey" fq-name="public.tasks.tasks_assigned_to_id_fkey" type="fk" pk-ref="9" fk-ref="7"/>
+		<relation name="tasks_creator_id_fkey" fq-name="public.tasks.tasks_creator_id_fkey" type="fk" pk-ref="9" fk-ref="7"/>
+		<relation name="user_sessions_user_id_fkey" fq-name="public.user_sessions.user_sessions_user_id_fkey" type="fk" pk-ref="9" fk-ref="8"/>
+	</relations>
+</diagram>
