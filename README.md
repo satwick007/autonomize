@@ -232,16 +232,26 @@ cp .env.example .env
 
 ### 4. Create the database
 
-Create a PostgreSQL database that matches the values in `backend/.env`.
+Create a PostgreSQL database named `task_management_system`, then restore the backup SQL file from the `database/` folder.
 
-By default:
+```bash
+createdb task_management_system
+psql -d task_management_system -f database/dump-task_management_system.sql
+```
 
-- database name: `task_management`
+If you are using a custom PostgreSQL user, run:
+
+```bash
+createdb -U postgres task_management_system
+psql -U postgres -d task_management_system -f database/dump-task_management_system.sql
+```
+
+Then make sure `backend/.env` points to the same database:
+
+- database name: `task_management_system`
 - user: `postgres`
 - host: `localhost`
 - port: `5432`
-
-The application seeds default state/priority/tag master data automatically on startup.
 
 
 ### Frontend (`frontend/.env`)
